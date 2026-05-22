@@ -1,0 +1,10 @@
+
+streamlit
+transformers
+torch
+textblob
+wordcloud
+matplotlib
+pandas
+sentencepiece
+google-genai
