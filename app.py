@@ -1,6 +1,9 @@
 import streamlit as st
 import os
-from google import genai
+from dotenv import load_dotenv
+load_dotenv()
+
+from langchain_google_genai import ChatGoogleGenerativeAI
 from textblob import TextBlob
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
@@ -416,8 +419,12 @@ if generate_btn:
     else:
         with st.spinner("🧠 Connecting to Cognitive Grid... Parsing syntax and executing summaries..."):
             try:
-                # Initialize Gemini Client
-                client = genai.Client(api_key=api_key_input)
+                # Initialize LangChain Gemini model
+                llm = ChatGoogleGenerativeAI(
+                    model=model_choice,
+                    temperature=0.3,
+                    google_api_key=api_key_input
+                )
                 
                 # Format prompts based on user custom constraints and sliders
                 format_prompts = {
@@ -449,17 +456,15 @@ if generate_btn:
                     
                 prompt += f"\n\n### INPUT TEXT FOR ANALYSIS:\n{text}\n\nProvide only the final, styled markdown output without conversational intros or outros."
                 
-                # Generate content using modern Client
-                response = client.models.generate_content(
-                    model=model_choice,
-                    contents=prompt
-                )
+                # Generate content using LangChain model
+                response = llm.invoke(prompt)
+                summary = response.content
                 
-                if response.text:
-                    st.session_state.summary = response.text
+                if summary:
+                    st.session_state.summary = summary
                     
                     # Run TextBlob Sentiment Analysis
-                    blob = TextBlob(response.text)
+                    blob = TextBlob(summary)
                     sentiment_score = blob.sentiment.polarity
                     st.session_state.sentiment_score = sentiment_score
                     
@@ -471,7 +476,7 @@ if generate_btn:
                         st.session_state.sentiment_label = "Neutral 😐"
                         
                     st.session_state.original_words = len(text.split())
-                    st.session_state.summary_words = len(response.text.split())
+                    st.session_state.summary_words = len(summary.split())
                 else:
                     st.error("Failed to generate response. The model returned empty content.")
                     
